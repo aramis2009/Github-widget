@@ -2,7 +2,7 @@
 
 Widget para la pantalla de inicio de iPhone que muestra tus contribuciones de GitHub del mes actual, con el estilo de cuadrados verdes de la plataforma. Corre sobre [Scriptable](https://scriptable.app) (gratis, App Store) y no depende de ningún backend propio: consulta la API de GitHub directamente desde el widget.
 
-![Captura del widget](assets/screenshot.png)
+![Captura del widget](assets/screenshot.jpg)
 
 ## Características
 
