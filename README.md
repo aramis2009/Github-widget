@@ -13,6 +13,7 @@ Widget para la pantalla de inicio de iPhone que muestra tus contribuciones de Gi
 - Los días futuros del mes se pintan tenues, para mantener la forma del calendario sin mostrar datos que no existen.
 - Tamaño de celda calculado a partir de `Device.screenSize()`, así que se adapta a cualquier iPhone.
 - Pensado para el tamaño de widget grande.
+- Dos templates: el verde de GitHub (por defecto) y `glitch`, en violeta y oro con tramado de píxeles.
 
 ## Requisitos
 
@@ -61,9 +62,30 @@ por tu token classic y tu nombre de usuario de GitHub.
 4. Agregalo y tocá el widget recién puesto para configurarlo.
 5. En **Script** elegí el archivo que pegaste. Dejá **When Interacting** en `Run Script` u **Open App**, como prefieras.
 
+## Templates
+
+El widget trae dos estilos:
+
+- **`default`**: el verde de GitHub, con celdas cuadradas.
+- **`glitch`**: fondo negro, celdas tramadas en violeta, oro y amarillo, y franjas corridas como una señal de video trabada. Las celdas se estiran a lo alto para llenar el widget.
+
+En `glitch` la intensidad se lee por la densidad del tramado y el color: puntos sueltos para los días sin contribuciones, violeta tenue, violeta denso, oro y amarillo sólido para los días con más actividad. Los cortes cambian una vez por día y nunca pasan por el total del mes.
+
+Para elegirlo, cambiá la constante al principio del script:
+
+```js
+const TEMPLATE = "default"
+```
+
+por `"glitch"`. También podés dejar la constante como está y escribir `glitch` en el campo **Parameter** al configurar el widget. Así podés tener dos widgets con el mismo script y un estilo distinto en cada uno. El parámetro tiene prioridad sobre la constante, y un nombre que no existe vuelve al template verde.
+
+Los colores de `glitch` están en el objeto `GLITCH` de `GitHubWidget.js`.
+
 ## Personalización
 
-Todo lo que sigue son fragmentos reales de `GitHubWidget.js`.
+Los fragmentos de esta sección corresponden al template `default`.
+
+Todos son fragmentos reales de `GitHubWidget.js`.
 
 **Paleta de colores** (intensidad del verde según contribuciones del día):
 
