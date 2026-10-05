@@ -13,7 +13,7 @@ Widget para la pantalla de inicio de iPhone que muestra tus contribuciones de Gi
 - Los días futuros del mes se pintan tenues, para mantener la forma del calendario sin mostrar datos que no existen.
 - Tamaño de celda calculado a partir de `Device.screenSize()`, así que se adapta a cualquier iPhone.
 - Pensado para el tamaño de widget grande.
-- Dos templates: el verde de GitHub (por defecto) y `glitch`, en violeta y oro con tramado de píxeles.
+- Dos templates con el mismo diseño: el verde de GitHub (por defecto) y `glitch`, en violeta y oro con tramado de píxeles.
 
 ## Requisitos
 
@@ -64,12 +64,12 @@ por tu token classic y tu nombre de usuario de GitHub.
 
 ## Templates
 
-El widget trae dos estilos:
+El widget trae dos estilos. Los dos tienen el mismo diseño (mes y total arriba, días de la semana y la grilla del mes); cambian los colores, las fuentes y el relleno de las celdas.
 
-- **`default`**: el verde de GitHub, con celdas cuadradas.
-- **`glitch`**: fondo negro, celdas tramadas en violeta, oro y amarillo, y franjas corridas como una señal de video trabada. Las celdas se estiran a lo alto para llenar el widget.
+- **`default`**: el verde de GitHub, con celdas redondeadas.
+- **`glitch`**: fondo negro, celdas cuadradas tramadas en violeta, oro y amarillo, y el nombre del mes con una sombra violeta corrida.
 
-En `glitch` la intensidad se lee por la densidad del tramado y el color: puntos sueltos para los días sin contribuciones, violeta tenue, violeta denso, oro y amarillo sólido para los días con más actividad. Los cortes cambian una vez por día y nunca pasan por el total del mes.
+En `glitch` la intensidad se lee por la densidad del tramado y el color: puntos sueltos para los días sin contribuciones, violeta tenue, violeta denso, oro y amarillo sólido para los días con más actividad. Hasta tres días con contribuciones aparecen "trabados", con una franja de la celda corrida hacia un costado. Cuáles son cambia una vez por día, no en cada refresco.
 
 Para elegirlo, cambiá la constante al principio del script:
 
@@ -79,7 +79,7 @@ const TEMPLATE = "default"
 
 por `"glitch"`. También podés dejar la constante como está y escribir `glitch` en el campo **Parameter** al configurar el widget. Así podés tener dos widgets con el mismo script y un estilo distinto en cada uno. El parámetro tiene prioridad sobre la constante, y un nombre que no existe vuelve al template verde.
 
-Los colores de cada template se cambian como se explica en [Personalización](#personalización).
+Cada template es una entrada del objeto `THEMES` en `GitHubWidget.js`. Ahí se cambian sus colores y fuentes, como se explica en [Personalización](#personalización).
 
 ## Personalización
 
@@ -119,28 +119,20 @@ Cambiá estos dos arrays para otro idioma. `WEEKDAYS` empieza en domingo (índic
 const GREENS = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"]
 ```
 
-**Color del contador** de contribuciones del mes:
+**Colores, fuentes, borde del día actual y redondeo**, en `THEMES.default`:
 
 ```js
-addText(header, `${monthTotal}`, Font.boldSystemFont(17), new Color("#39d353"))
+default: {
+  background: new Color("#0d1117"),
+  monthFont: Font.boldSystemFont(17), monthColor: Color.white(),
+  countFont: Font.boldSystemFont(17), countColor: new Color("#39d353"),
+  smallFont: Font.mediumSystemFont(10), mutedColor: new Color("#6e7681"),
+  todayColor: new Color("#58a6ff"),
+  errorColor: new Color("#f78166"), errorTextColor: new Color("#8b949e"),
+  cornerRadius: box => Math.min(box * 0.22, 8),
 ```
 
-**Borde del día actual**:
-
-```js
-if (day === today) {
-  cell.borderWidth = 1.5
-  cell.borderColor = new Color("#58a6ff")
-}
-```
-
-**Redondeo de las celdas**:
-
-```js
-cell.cornerRadius = Math.min(box * 0.22, 8)
-```
-
-Subí el `0.22` para celdas más redondeadas, bajalo para celdas más cuadradas.
+`countColor` es el color del total del mes y `todayColor` el del borde del día actual. Subí el `0.22` de `cornerRadius` para celdas más redondeadas, bajalo para celdas más cuadradas.
 
 ### Template `glitch`
 
@@ -156,7 +148,7 @@ const GLITCH = {
 }
 ```
 
-`violetDim`, `violet`, `gold` y `yellow` van del nivel 1 al 4. El total del mes y el marco del día actual usan `yellow`.
+`violetDim`, `violet`, `gold` y `yellow` van del nivel 1 al 4. Las fuentes, el color del total del mes y el del borde del día actual están en `THEMES.glitch`, igual que en el template verde.
 
 ## Solución de problemas
 

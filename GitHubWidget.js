@@ -1,4 +1,4 @@
-const GITHUB_TOKEN = "TU_TOKEN_AQUI"
+    const GITHUB_TOKEN = "TU_TOKEN_AQUI"
 
 const GITHUB_USER = "TU_USUARIO_AQUI"
 
@@ -85,6 +85,7 @@ function addText(stack, text, font, color) {
   let label = stack.addText(text)
   label.font = font
   label.textColor = color
+  return label
 }
 
 function addRow(stack, spacing) {
@@ -94,73 +95,7 @@ function addRow(stack, spacing) {
   return row
 }
 
-// ---- Template "default": verde, como el grafico de GitHub ----
-
-function renderDefault(widget, { month, today, grid, countFor, monthTotal }) {
-  const HEADER_H = 24, WEEKDAY_H = 13, GAP_AFTER_HEADER = 8, GAP_AFTER_WEEKDAYS = 5
-  let side = widgetSide()
-  let numRows = grid.length
-
-  // --- Tamanio de celda: el menor que entre a lo ancho y a lo alto ---
-  let slot = (side - PADDING * 2) / 7
-  let spacing = Math.max(slot * 0.12, 2)
-  let availableHeight = side - (PADDING * 2 + HEADER_H + GAP_AFTER_HEADER + WEEKDAY_H + GAP_AFTER_WEEKDAYS)
-  let box = Math.max(Math.min(slot - spacing, (availableHeight - spacing * (numRows - 1)) / numRows), 1)
-
-  widget.backgroundColor = new Color("#0d1117")
-  widget.setPadding(PADDING, PADDING, PADDING, PADDING)
-
-  // ---- Encabezado: mes a la izquierda, total del mes a la derecha ----
-  let header = widget.addStack()
-  header.layoutHorizontally()
-  header.centerAlignContent()
-  addText(header, MONTHS[month], Font.boldSystemFont(17), Color.white())
-  header.addSpacer()
-  addText(header, `${monthTotal}`, Font.boldSystemFont(17), new Color("#39d353"))
-  header.addSpacer(4)
-  addText(header, "este mes", Font.mediumSystemFont(10), new Color("#6e7681"))
-  widget.addSpacer(GAP_AFTER_HEADER)
-
-  // ---- Iniciales de los dias de la semana ----
-  let weekdayRow = addRow(widget, spacing)
-  for (let wd of WEEKDAYS) {
-    let cell = weekdayRow.addStack()
-    cell.size = new Size(box, WEEKDAY_H)
-    cell.centerAlignContent()
-    addText(cell, wd, Font.mediumSystemFont(10), new Color("#6e7681"))
-  }
-  widget.addSpacer(GAP_AFTER_WEEKDAYS)
-
-  // ---- Grilla del mes ----
-  let gridStack = widget.addStack()
-  gridStack.layoutVertically()
-  gridStack.spacing = spacing
-
-  for (let row of grid) {
-    let rowStack = addRow(gridStack, spacing)
-    for (let day of row) {
-      let cell = rowStack.addStack()
-      cell.size = new Size(box, box)
-      cell.cornerRadius = Math.min(box * 0.22, 8)
-
-      // Fuera del mes: invisible. Dia futuro: se marca apenas, para mantener la forma del calendario
-      let count = day === null ? null : countFor(day)
-      cell.backgroundColor = day === null ? Color.clear()
-        : count === undefined ? new Color("#0f141a")
-        : colorForCount(count)
-
-      // Marca el dia de hoy con un borde
-      if (day === today) {
-        cell.borderWidth = 1.5
-        cell.borderColor = new Color("#58a6ff")
-      }
-    }
-  }
-
-  widget.addSpacer()
-}
-
-// ---- Template "glitch": violeta y oro sobre negro, tramado y con cortes ----
+// ---- Tramado del template "glitch": violeta y oro sobre negro ----
 
 const GLITCH = {
   background: "#050505", text: "#ece6ff", muted: "#6b6485",
@@ -191,12 +126,6 @@ function fill(ctx, rect, color) {
   ctx.fillRect(rect)
 }
 
-function drawText(ctx, text, rect, font, color) {
-  ctx.setFont(font)
-  ctx.setTextColor(new Color(color))
-  ctx.drawTextInRect(text, rect)
-}
-
 // Rellena un rectangulo con puntos de 1pt, como un tramado de pixeles.
 // "sparse" deja un punto cada 3pt, "grid" uno cada 2pt y "checker" arma un damero.
 function fillDither(ctx, rect, color, pattern) {
@@ -218,8 +147,6 @@ function fillDither(ctx, rect, color, pattern) {
 // La intensidad sube por densidad de puntos y por color. Las celdas de nivel 3 y 4
 // llevan al pie una franja tramada de otro color.
 function drawGlitchCell(ctx, rect, count) {
-  if (count === undefined) return fill(ctx, rect, GLITCH.future)
-
   let meltH = Math.max(Math.round(rect.height * 0.22), 3)
   let top = new Rect(rect.x, rect.y, rect.width, rect.height - meltH)
   let melt = new Rect(rect.x, rect.y + rect.height - meltH, rect.width, meltH)
@@ -238,98 +165,174 @@ function drawGlitchCell(ctx, rect, count) {
   }
 }
 
-function renderGlitch(widget, { year, month, today, grid, countFor, monthTotal }) {
-  const HEADER_H = 34, WEEKDAY_H = 13, GAP_AFTER_HEADER = 8, GAP_AFTER_WEEKDAYS = 5
-  let numRows = grid.length
+// Imagen de fondo de una celda. Con "tear", una franja horizontal queda corrida,
+// como una senial de video trabada. Cada contexto se cierra con su getImage():
+// en Scriptable no se sigue dibujando sobre un contexto despues de sacarle la imagen.
+const glitchImages = {}
+function glitchCellImage(box, count, tear) {
+  let key = level(count)
+  if (!tear && glitchImages[key]) return glitchImages[key]
 
-  // Todo se dibuja en una sola imagen para poder tramar las celdas y correr franjas
-  let width = Math.floor(widgetSide() - PADDING * 2)
-  let height = width
-  let ctx = newContext(width, height)
+  let ctx = newContext(box, box)
+  drawGlitchCell(ctx, new Rect(0, 0, box, box), count)
+  let image = ctx.getImage()
+  if (!tear) return (glitchImages[key] = image)
 
-  // ---- Encabezado: mes a la izquierda, total del mes a la derecha ----
-  ctx.setTextAlignedLeft()
-  drawText(ctx, MONTHS[month], new Rect(0, 0, width * 0.6, HEADER_H), new Font(HEAVY, 26), GLITCH.text)
-  ctx.setTextAlignedRight()
-  drawText(ctx, `${monthTotal}`, new Rect(width * 0.6, 0, width * 0.4, 22), new Font(HEAVY, 20), GLITCH.yellow)
-  drawText(ctx, "este mes", new Rect(width * 0.6, 22, width * 0.4, 12), new Font(DEMIBOLD, 10), GLITCH.muted)
+  let slice = newContext(box, tear.h)
+  slice.drawImageAtPoint(image, new Point(0, -tear.y))
+  let strip = slice.getImage()
 
-  // ---- Tamanio de celda ----
-  // A diferencia del template verde, las celdas se estiran a lo alto
-  // para llenar el widget: quedan como barras y no como cuadrados.
-  let spacing = Math.max(Math.round((width / 7) * 0.12), 2)
-  let gridTop = HEADER_H + GAP_AFTER_HEADER + WEEKDAY_H + GAP_AFTER_WEEKDAYS
-  let cellW = Math.floor((width - spacing * 6) / 7)
-  let cellH = Math.floor((height - gridTop - spacing * (numRows - 1)) / numRows)
-  let left = Math.floor((width - (cellW * 7 + spacing * 6)) / 2)
-  let colX = col => left + col * (cellW + spacing)
-
-  // ---- Iniciales de los dias de la semana ----
-  ctx.setTextAlignedCenter()
-  WEEKDAYS.forEach((wd, i) => {
-    let rect = new Rect(colX(i), HEADER_H + GAP_AFTER_HEADER, cellW, WEEKDAY_H)
-    drawText(ctx, wd, rect, new Font(DEMIBOLD, 10), GLITCH.muted)
-  })
-
-  // ---- Grilla del mes ----
-  grid.forEach((row, r) => row.forEach((day, c) => {
-    if (day === null) return   // fuera del mes: no se dibuja
-
-    let cell = new Rect(colX(c), gridTop + r * (cellH + spacing), cellW, cellH)
-    drawGlitchCell(ctx, cell, countFor(day))
-
-    // Hoy: un marco amarillo corrido, como una impresion mal registrada
-    if (day === today) {
-      ctx.setStrokeColor(new Color(GLITCH.yellow))
-      ctx.setLineWidth(1)
-      ctx.strokeRect(new Rect(cell.x + 2.5, cell.y - 1.5, cellW - 1, cellH - 1))
-    }
-  }))
-
-  // ---- Cortes: franjas horizontales corridas, como una senial de video trabada ----
-  let random = seededRandom(year * 10000 + (month + 1) * 100 + today)
-  let between = (min, max) => min + Math.floor(random() * (max - min + 1))
-  let bands = [
-    // la primera siempre cruza el nombre del mes, sin tocar el total
-    { y: between(8, 14), h: between(4, 7), w: Math.round(width * 0.6), dx: between(3, 6) },
-    { y: between(gridTop, height - 8), h: between(3, 7), w: width, dx: -between(3, 8) },
-    { y: between(gridTop, height - 2), h: between(1, 2), w: width, dx: between(10, 20) },
-  ]
-
-  let base = ctx.getImage()
-  for (let band of bands) {
-    let slice = newContext(band.w, band.h)
-    slice.drawImageAtPoint(base, new Point(0, -band.y))
-    fill(ctx, new Rect(0, band.y, band.w, band.h), GLITCH.background)
-    ctx.drawImageAtPoint(slice.getImage(), new Point(band.dx, band.y))
-  }
-
-  widget.backgroundColor = new Color(GLITCH.background)
-  widget.setPadding(PADDING, PADDING, PADDING, PADDING)
-  widget.addImage(ctx.getImage()).imageSize = new Size(width, height)
+  let torn = newContext(box, box)
+  torn.drawImageAtPoint(image, new Point(0, 0))
+  fill(torn, new Rect(0, tear.y, box, tear.h), GLITCH.background)
+  torn.drawImageAtPoint(strip, new Point(tear.dx, tear.y))
+  return torn.getImage()
 }
 
-function renderError(widget, error, template) {
-  let glitch = template === "glitch"
-  widget.backgroundColor = new Color(glitch ? GLITCH.background : "#0d1117")
+// Elige hasta tres dias con contribuciones para mostrarlos trabados.
+function pickTears({ year, month, today, countFor }, box) {
+  let random = seededRandom(year * 10000 + (month + 1) * 100 + today)
+  let between = (min, max) => min + Math.floor(random() * (max - min + 1))
+
+  let candidates = []
+  for (let day = 1; day <= today; day++) if (countFor(day) > 0) candidates.push(day)
+
+  let tears = {}
+  for (let i = 0; i < 3 && candidates.length > 0; i++) {
+    let day = candidates.splice(between(0, candidates.length - 1), 1)[0]
+    let h = between(2, 4)
+    tears[day] = { y: between(2, Math.floor(box) - h - 2), h, dx: between(3, 6) * (random() < 0.5 ? -1 : 1) }
+  }
+  return tears
+}
+
+// ---- Templates ----
+// Todos usan el mismo orden: encabezado, dias de la semana y grilla del mes.
+// Cada template solo define colores, fuentes y como se pinta cada celda.
+
+const THEMES = {
+  default: {
+    background: new Color("#0d1117"),
+    monthFont: Font.boldSystemFont(17), monthColor: Color.white(),
+    countFont: Font.boldSystemFont(17), countColor: new Color("#39d353"),
+    smallFont: Font.mediumSystemFont(10), mutedColor: new Color("#6e7681"),
+    todayColor: new Color("#58a6ff"),
+    errorColor: new Color("#f78166"), errorTextColor: new Color("#8b949e"),
+    cornerRadius: box => Math.min(box * 0.22, 8),
+    // Dia futuro: se marca apenas, para mantener la forma del calendario
+    paintCell: (cell, count) => {
+      cell.backgroundColor = count === undefined ? new Color("#0f141a") : colorForCount(count)
+    },
+  },
+
+  glitch: {
+    background: new Color(GLITCH.background),
+    monthFont: new Font(HEAVY, 17), monthColor: new Color(GLITCH.text),
+    // Sombra violeta corrida y sin desenfoque: el nombre del mes se ve doble
+    monthShadow: new Color(GLITCH.violet),
+    countFont: new Font(HEAVY, 17), countColor: new Color(GLITCH.yellow),
+    smallFont: new Font(DEMIBOLD, 10), mutedColor: new Color(GLITCH.muted),
+    todayColor: new Color(GLITCH.yellow),
+    errorColor: new Color(GLITCH.yellow), errorTextColor: new Color(GLITCH.text),
+    cornerRadius: () => 0,
+    pickTears,
+    paintCell: (cell, count, box, tear) => {
+      if (count === undefined) cell.backgroundColor = new Color(GLITCH.future)
+      else cell.backgroundImage = glitchCellImage(box, count, tear)
+    },
+  },
+}
+
+function renderCalendar(widget, theme, data) {
+  let { month, today, grid, countFor, monthTotal } = data
+  const HEADER_H = 24, WEEKDAY_H = 13, GAP_AFTER_HEADER = 8, GAP_AFTER_WEEKDAYS = 5
+  let side = widgetSide()
+  let numRows = grid.length
+
+  // --- Tamanio de celda: el menor que entre a lo ancho y a lo alto ---
+  let slot = (side - PADDING * 2) / 7
+  let spacing = Math.max(slot * 0.12, 2)
+  let availableHeight = side - (PADDING * 2 + HEADER_H + GAP_AFTER_HEADER + WEEKDAY_H + GAP_AFTER_WEEKDAYS)
+  let box = Math.max(Math.min(slot - spacing, (availableHeight - spacing * (numRows - 1)) / numRows), 1)
+  let tears = theme.pickTears ? theme.pickTears(data, box) : {}
+
+  widget.backgroundColor = theme.background
   widget.setPadding(PADDING, PADDING, PADDING, PADDING)
-  addText(widget, "Error", Font.boldSystemFont(15), new Color(glitch ? GLITCH.yellow : "#f78166"))
+
+  // ---- Encabezado: mes a la izquierda, total del mes a la derecha ----
+  let header = widget.addStack()
+  header.layoutHorizontally()
+  header.centerAlignContent()
+  let monthLabel = addText(header, MONTHS[month], theme.monthFont, theme.monthColor)
+  if (theme.monthShadow) {
+    monthLabel.shadowColor = theme.monthShadow
+    monthLabel.shadowOffset = new Point(-2, 0)
+    monthLabel.shadowRadius = 0
+  }
+  header.addSpacer()
+  addText(header, `${monthTotal}`, theme.countFont, theme.countColor)
+  header.addSpacer(4)
+  addText(header, "este mes", theme.smallFont, theme.mutedColor)
+  widget.addSpacer(GAP_AFTER_HEADER)
+
+  // ---- Iniciales de los dias de la semana ----
+  let weekdayRow = addRow(widget, spacing)
+  for (let wd of WEEKDAYS) {
+    let cell = weekdayRow.addStack()
+    cell.size = new Size(box, WEEKDAY_H)
+    cell.centerAlignContent()
+    addText(cell, wd, theme.smallFont, theme.mutedColor)
+  }
+  widget.addSpacer(GAP_AFTER_WEEKDAYS)
+
+  // ---- Grilla del mes ----
+  let gridStack = widget.addStack()
+  gridStack.layoutVertically()
+  gridStack.spacing = spacing
+
+  for (let row of grid) {
+    let rowStack = addRow(gridStack, spacing)
+    for (let day of row) {
+      let cell = rowStack.addStack()
+      cell.size = new Size(box, box)
+      cell.cornerRadius = theme.cornerRadius(box)
+
+      if (day === null) {
+        cell.backgroundColor = Color.clear()   // fuera del mes: invisible
+        continue
+      }
+      theme.paintCell(cell, countFor(day), box, tears[day])
+
+      // Marca el dia de hoy con un borde
+      if (day === today) {
+        cell.borderWidth = 1.5
+        cell.borderColor = theme.todayColor
+      }
+    }
+  }
+
+  widget.addSpacer()
+}
+
+function renderError(widget, error, theme) {
+  widget.backgroundColor = theme.background
+  widget.setPadding(PADDING, PADDING, PADDING, PADDING)
+  addText(widget, "Error", Font.boldSystemFont(15), theme.errorColor)
   widget.addSpacer(6)
-  addText(widget, error.message, Font.systemFont(12), new Color(glitch ? GLITCH.text : "#8b949e"))
+  addText(widget, error.message, Font.systemFont(12), theme.errorTextColor)
 }
 
 async function createWidget() {
   let widget = new ListWidget()
   // El parametro del widget gana sobre la constante TEMPLATE.
   // Un nombre desconocido cae en el template verde.
-  let template = (args.widgetParameter || TEMPLATE).trim().toLowerCase() === "glitch" ? "glitch" : "default"
+  let name = (args.widgetParameter || TEMPLATE).trim().toLowerCase()
+  let theme = name === "glitch" ? THEMES.glitch : THEMES.default
 
   try {
-    let data = await loadMonthData()
-    if (template === "glitch") renderGlitch(widget, data)
-    else renderDefault(widget, data)
+    renderCalendar(widget, theme, await loadMonthData())
   } catch (error) {
-    renderError(widget, error, template)
+    renderError(widget, error, theme)
   }
   return widget
 }
