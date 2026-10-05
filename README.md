@@ -79,32 +79,50 @@ const TEMPLATE = "default"
 
 por `"glitch"`. También podés dejar la constante como está y escribir `glitch` en el campo **Parameter** al configurar el widget. Así podés tener dos widgets con el mismo script y un estilo distinto en cada uno. El parámetro tiene prioridad sobre la constante, y un nombre que no existe vuelve al template verde.
 
-Los colores de `glitch` están en el objeto `GLITCH` de `GitHubWidget.js`.
+Los colores de cada template se cambian como se explica en [Personalización](#personalización).
 
 ## Personalización
 
-Los fragmentos de esta sección corresponden al template `default`.
-
 Todos son fragmentos reales de `GitHubWidget.js`.
 
-**Paleta de colores** (intensidad del verde según contribuciones del día):
+### Para los dos templates
+
+**Cuántas contribuciones hacen falta para cada intensidad**:
 
 ```js
-function colorForCount(count) {
-  if (count == 0) return new Color("#161b22")
-  if (count <= 2) return new Color("#0e4429")
-  if (count <= 4) return new Color("#006d32")
-  if (count <= 6) return new Color("#26a641")
-  return new Color("#39d353")
+function level(count) {
+  if (count == 0) return 0
+  if (count <= 2) return 1
+  if (count <= 4) return 2
+  if (count <= 6) return 3
+  return 4
 }
+```
+
+Los dos templates usan esta función, así que si cambiás los cortes cambian en los dos.
+
+**Idioma de meses y días de la semana**:
+
+```js
+const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+const WEEKDAYS = ["D","L","M","M","J","V","S"]
+```
+
+Cambiá estos dos arrays para otro idioma. `WEEKDAYS` empieza en domingo (índice 0), igual que `Date.getDay()` en JavaScript.
+
+### Template `default`
+
+**Paleta de verdes**, del día sin contribuciones (nivel 0) al de más actividad (nivel 4):
+
+```js
+const GREENS = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"]
 ```
 
 **Color del contador** de contribuciones del mes:
 
 ```js
-let countLabel = header.addText(`${monthTotal}`)
-countLabel.font = Font.boldSystemFont(17)
-countLabel.textColor = new Color("#39d353")
+addText(header, `${monthTotal}`, Font.boldSystemFont(17), new Color("#39d353"))
 ```
 
 **Borde del día actual**:
@@ -124,15 +142,21 @@ cell.cornerRadius = Math.min(box * 0.22, 8)
 
 Subí el `0.22` para celdas más redondeadas, bajalo para celdas más cuadradas.
 
-**Idioma de meses y días de la semana**:
+### Template `glitch`
+
+**Paleta**:
 
 ```js
-const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
-                "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
-const WEEKDAYS = ["D","L","M","M","J","V","S"]
+const GLITCH = {
+  background: "#050505", text: "#ece6ff", muted: "#6b6485",
+  empty: "#2b2538",     // dia pasado sin contribuciones
+  future: "#0a090e",    // dia del mes que todavia no llego
+  violetDim: "#5b43c4", violet: "#8a6cf2", gold: "#d2a54a", yellow: "#f2c45a",
+  melt: "#c48fe0",      // tramado al pie de las celdas mas intensas
+}
 ```
 
-Cambiá estos dos arrays para otro idioma. `WEEKDAYS` empieza en domingo (índice 0), igual que `Date.getDay()` en JavaScript.
+`violetDim`, `violet`, `gold` y `yellow` van del nivel 1 al 4. El total del mes y el marco del día actual usan `yellow`.
 
 ## Solución de problemas
 
